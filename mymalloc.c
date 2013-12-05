@@ -2,16 +2,21 @@
 
 void *mymalloc(int size, char *file, int line)
 {
+	if (size > MEMSPACE) {
+		fprintf(stderr, "Insufficient memory space %d in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
+		return NULL;
+	}
+	if (size <= 0) {
+		fprintf(stderr, "Invalid size to allocate '%d' in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
+		return NULL;
+	}
 	if (mems == NULL) {
-		if (size > MEMSPACE) {
-			fprintf(stderr, "Insufficient memory space %d in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
-			return NULL;
-		}
 		MemEntry *n = (MemEntry *)malloc(sizeof(MemEntry));
 		n->next = NULL;
 		n->start = 0;
-		n->end = size;
+		n->end = size-1;
 		mems = n;
+		printf("DEBUG: n->start = %d\n", n->start);
 		return memory; //return first index
 	}
 
@@ -20,20 +25,30 @@ void *mymalloc(int size, char *file, int line)
 	int pEnd = -1;
 	MemEntry *n = NULL; //memory node that is inserted, if inserted
 	//if malloc successful, need to insert BEFORE cur
-	for (cur = mems; ; cur = cur->next, prev = cur) {
-		if (cur == NULL && size < MEMSPACE - pEnd) { //insert at end or beginning
-			n = (MemEntry *)malloc(sizeof(MemEntry));
-			n->next = NULL;
-			n->start = pEnd+1;
-			n->end = size-1;
-			if (prev == NULL) { //first insertion
-				mems = n;
-			} else { //insert at end
-				prev->next = n;
+	int i = 0;
+	for (cur = mems; ; prev = cur, pEnd = cur->end, cur = cur->next) {
+		printf("i = %d\n", i++);
+		if (cur == NULL) {
+			printf("1\n");
+			if (size < MEMSPACE - pEnd) {//insert at end or beginning
+
+				n = (MemEntry *)malloc(sizeof(MemEntry));
+				n->next = NULL;
+				n->start = pEnd+1;
+				n->end = size-1;
+				if (prev == NULL) { //first insertion
+					mems = n;
+				} else { //insert at end
+					prev->next = n;
+				}
+				printf("DEBUG: n->start = %d\n", n->start);
+				return memory + n->start;
 			}
-			return memory + n->start;
+			fprintf(stderr, "Insufficient memory space %d in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
+			return NULL; //no space
 		}
 		else if (size < cur->start - pEnd) { //insert in beginning or before existing
+			printf("2\n");
 			n = (MemEntry *)malloc(sizeof(MemEntry));
 			n->next = NULL;
 			n->start = pEnd+1;
@@ -45,14 +60,10 @@ void *mymalloc(int size, char *file, int line)
 				n->next = cur;
 				prev->next = n;
 			}
+		printf("DEBUG: n->start = %d\n", n->start);
 			return memory + n->start;
-		}
-	}
-
-	// If reached, unable to allocate memory space
-	if (n == NULL) {
-		fprintf(stderr, "Insufficient memory space %d in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
-		return NULL;
+		} else
+			continue; //cant alloc in this space chunk, try next
 	}
 }
 

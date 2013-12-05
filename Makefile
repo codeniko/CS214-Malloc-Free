@@ -2,16 +2,18 @@ COMPILER = gcc
 CFLAGS = -Wall -g
 CFLAGS2 = -g
 
-all: malloc
+all: mymalloc
+.PHONY: all
+.PHONY: clean
 
-malloc.o: malloc.c malloc.h
-	$(COMPILER) $(CFLAGS) -c malloc.c
+mymalloc.o: mymalloc.c mymalloc.h
+	$(COMPILER) $(CFLAGS) -c mymalloc.c
 
-main.o: main.c malloc.h
+main.o: main.c mymalloc.h
 	$(COMPILER) $(CFLAGS2) -c main.c
 	
-malloc: malloc.o main.o
-	$(COMPILER) $(CFLAGS) -o main.o malloc.o
+mymalloc: mymalloc.o main.o
+	$(COMPILER) $(CFLAGS) -o mymalloc main.o mymalloc.o
 	
 clean:
-	rm -f *.o malloc
+	rm -f *.o mymalloc

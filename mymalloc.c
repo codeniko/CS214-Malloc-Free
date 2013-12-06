@@ -1,105 +1,129 @@
 #include "mymalloc.h"
 
-void *mymalloc(int size, char *file, int line)
+#define MEMSIZE 25000
+
+struct MemEntry
 {
-	if (size > MEMSPACE) {
-		fprintf(stderr, "Insufficient memory space %d in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
-		return NULL;
-	}
-	if (size <= 0) {
-		fprintf(stderr, "Invalid size to allocate '%d' in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
-		return NULL;
-	}
-	if (mems == NULL) {
-		MemEntry *n = (MemEntry *)malloc(sizeof(MemEntry));
-		n->next = NULL;
-		n->start = 0;
-		n->end = size-1;
-		mems = n;
-		printf("DEBUG: n->start = %d\n", n->start);
-		return memory; //return first index
+	struct MemEntry *prev, *next;
+	int isfree;		// 1 - yes, 0 - no
+	int size;
+};
+
+
+static char memblock[MEMSIZE];
+static void *memEntries[MEMSIZE/sizeof(struct MemEntry)+1] = {0}; //pointers to memEntries
+static int lastIndex = -1;
+//static int memEntriesBool[MEMSIZE/sizeof(MemEntry)+1] = {0}; //1=used,0=free
+
+
+// return a pointer to the memory buffer requested
+void *mymalloc(unsigned int size, char *file, int line)
+{
+	static int initialized = 0;
+	static struct MemEntry *root;
+	struct MemEntry *p;
+	struct MemEntry *next;
+	
+	if (size == 0) {
+		fprintf(stderr, "Unable to allocate 0 bytes in FILE: '%s' on LINE: '%d'\n", file, line);
+		return 0;
 	}
 
-	MemEntry *cur = NULL;
-	MemEntry *prev = NULL;
-	int pEnd = -1;
-	MemEntry *n = NULL; //memory node that is inserted, if inserted
-	//if malloc successful, need to insert BEFORE cur
-	int i = 0;
-	for (cur = mems; ; prev = cur, pEnd = cur->end, cur = cur->next) {
-		printf("i = %d\n", i++);
-		if (cur == NULL) {
-			printf("1\n");
-			if (size < MEMSPACE - pEnd) {//insert at end or beginning
+	if(!initialized)	// 1st time called
+	{
+		// create a root chunk at the beginning of the memory block
+		root = (struct MemEntry*) memblock;
+		root->prev = root->next = 0;
+		root->size = MEMSIZE - sizeof(struct MemEntry);
+		root->isfree = 1;
+		initialized = 1;
+		memEntries[++lastIndex] = memblock;
+	}
 
-				n = (MemEntry *)malloc(sizeof(MemEntry));
-				n->next = NULL;
-				n->start = pEnd+1;
-				n->end = size-1;
-				if (prev == NULL) { //first insertion
-					mems = n;
-				} else { //insert at end
-					prev->next = n;
-				}
-				printf("DEBUG: n->start = %d\n", n->start);
-				return memory + n->start;
-			}
-			fprintf(stderr, "Insufficient memory space %d in file: '%s' on line: '%d'\n", size, __FILE__, __LINE__);
-			return NULL; //no space
+	p = root;
+	do
+	{
+		if(p->size < size || !p->isfree) {
+			// the current chunk is smaller, go to the next chunk
+			// or this chunk was taken, go to the next
+			p = p->next;
 		}
-		else if (size < cur->start - pEnd) { //insert in beginning or before existing
-			printf("2\n");
-			n = (MemEntry *)malloc(sizeof(MemEntry));
-			n->next = NULL;
-			n->start = pEnd+1;
-			n->end = size-1;
-			if (prev == NULL) { //insert in beginning
-				n->next = mems;
-				mems = n;
-			} else { //insert before cur
-				n->next = cur;
-				prev->next = n;
-			}
-		printf("DEBUG: n->start = %d\n", n->start);
-			return memory + n->start;
-		} else
-			continue; //cant alloc in this space chunk, try next
-	}
+		else if(p->size < (size + sizeof(struct MemEntry))) {
+			// this chunk is free and large enough to hold data, 
+			// but there's not enough memory to hold the HEADER of the next chunk
+			// don't create any more chunks after this one
+			p->isfree = 0;
+			return (char*)p + sizeof(struct MemEntry);
+		}
+		else {
+			// take the needed memory and create the header of the next chunk
+			next = (struct MemEntry*)((char*)p + sizeof(struct MemEntry) + size);
+			next->prev = p;
+			next->next = p->next;
+			next->size = p->size - sizeof(struct MemEntry) - size;
+			next->isfree = 1;
+			memEntries[++lastIndex] = next;
+			p->size = size;
+			p->isfree = 0;
+			p->next = next;
+			return (char*)p + sizeof(struct MemEntry);
+		}
+	} while (p != 0);
+
+	fprintf(stderr, "Insufficient memory space requested (%d bytes) in FILE: '%s' on LINE: '%d'\n", size, file, line);
+	return 0;
 }
 
+// free a memory buffer pointed to by p
 void myfree(void *p, char *file, int line)
 {
-	MemEntry *cur = NULL;
-	MemEntry *prev = NULL;
+	struct MemEntry *ptr;
+	struct MemEntry *prev;
+	struct MemEntry *next;
 
-	//NULL POINTER
 	if (p == NULL) {
-		fprintf(stderr, "ERROR: Pointer is NULL in file: '%s' on line: '%d'\n", __FILE__, __LINE__);
+		fprintf(stderr, "Pointer is NULL in file, free failed in FILE: '%s' on LINE: '%d'\n", file, line);
 		return;
 	}
 
-	for (cur = mems; cur != NULL; cur = cur->next, prev = cur) {
-		//check if pointer is in our alloc entries
-		if (p == memory + cur->start)
-		{
-			if (prev == NULL && cur->next == NULL) {
-				//last entry, set global mems to NULL
-				free(cur);
-				mems = NULL;
-				return;
-			} else if (prev == NULL) {
-				//first entry
-				mems = cur->next;
-				free(cur);
-				return;
-			} else {
-				//entry is in middle or end
-				prev->next = cur->next;
-				free(cur);
-				return;
+	ptr = (struct MemEntry*)((char*)p - sizeof(struct MemEntry));
+	
+	//check if valid memEntry ptr
+	int i;
+	int valid = 0;
+	for (i = 0; i <= lastIndex; i++) {
+		if (ptr == memEntries[i]) {
+			valid = 1; //memEntry is valid
+			break;
+		}
+	}
+	if (!valid) {
+		fprintf(stderr, "Free failure: Attempting to free memory that was not malloced in FILE: '%s' on LINE: '%d'\n", file, line);
+		return;
+	}
+
+	if((prev = ptr->prev) != 0 && prev->isfree)
+	{
+		// the previous chunk is free, so
+		// merge this chunk with the previous chunk
+		prev->size += sizeof(struct MemEntry) + ptr->size;
+		memEntries[i] = 0; //merged with previous, so removing free memEntry
+	}
+	else
+	{ //not setting memEntry to null b/c not necessarily removing it, just isfree=1
+		ptr->isfree = 1;
+		prev = ptr;	// used for the step below
+	}
+	if((next = ptr->next) != 0 && next->isfree)
+	{
+		// the next chunk is free, merge with it
+		prev->size += sizeof(struct MemEntry) + next->size;
+		//prev->isfree = 1;
+		for (i = 0; i <= lastIndex; i++) {
+			if (next == memEntries[i]) {
+				memEntries[i] = 0; //merged with next, so removing free memEntry
+				break;
 			}
 		}
 	}
-	fprintf(stderr, "ERROR: Unable to free, pointer not allocated: '%s' on line: '%d'\n", __FILE__, __LINE__);
-	return;
 }

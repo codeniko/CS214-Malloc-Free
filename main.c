@@ -2,23 +2,27 @@
 
 void main()
 {
-	void *p = mymallocd(25000);
+	printf("mallocing p 25000\n");
+	void *p = malloc(25000);
 	printf("p 25000 '%p'\n", p);
-	void *p2 = mymallocd(1000);
-	void *p3 = mymallocd(6000);
+	printf("mallocing p2 1000\n");
+	void *p2 = malloc(1000);
 	printf("p2 1000 '%p'\n", p2);
+	printf("mallocing p3 6000\n");
+	void *p3 = malloc(6000);
 	printf("p3 6000 '%p'\n", p3);
-	void *p4 = mymallocd(20000);
+	printf("mallocing p4 20000\n");
+	void *p4 = malloc(20000);
 	printf("p4 20000 '%p'\n", p4);
 
 	printf("Freeing p\n");
-	myfreed(p);
+	free(p);
 	printf("Freeing p2\n");
-	myfreed(p2);
+	free(p2);
 	printf("Freeing p3\n");
-	myfreed(p3);
+	free(p3);
 	printf("Freeing p4\n");
-	myfreed(p4);
+	free(p4);
 	printf("Freeing p3\n");
-	myfreed(p3);
+	free(p3);
 }

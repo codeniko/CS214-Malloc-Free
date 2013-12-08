@@ -15,7 +15,7 @@ static const int entriesSize = MEMSIZE/sizeof(struct MemEntry)+1; //size of memE
 static void *memEntries[MEMSIZE/sizeof(struct MemEntry)+1] = {0}; //pointers to memEntries
 
 // return the first occurance of an index not containing a memEntry
-int getFreeIndex() {
+static int getFreeIndex() {
 	int i;
 	for (i = 0; i < entriesSize; i++)
 		if (memEntries[i] == 0) 

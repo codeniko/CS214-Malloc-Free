@@ -14,7 +14,7 @@ static char memblock[MEMSIZE]; //big block of memory space
 static const int entriesSize = MEMSIZE/sizeof(struct MemEntry)+1; //size of memEntries
 static void *memEntries[MEMSIZE/sizeof(struct MemEntry)+1] = {0}; //pointers to memEntries
 
-
+// return the first occurance of an index not containing a memEntry
 int getFreeIndex() {
 	int i;
 	for (i = 0; i < entriesSize; i++)

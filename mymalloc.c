@@ -10,11 +10,18 @@ struct MemEntry
 };
 
 
-static char memblock[MEMSIZE];
+static char memblock[MEMSIZE]; //big block of memory space
+static const int entriesSize = MEMSIZE/sizeof(struct MemEntry)+1; //size of memEntries
 static void *memEntries[MEMSIZE/sizeof(struct MemEntry)+1] = {0}; //pointers to memEntries
-static int lastIndex = -1;
-//static int memEntriesBool[MEMSIZE/sizeof(MemEntry)+1] = {0}; //1=used,0=free
 
+
+int getFreeIndex() {
+	int i;
+	for (i = 0; i < entriesSize; i++)
+		if (memEntries[i] == 0) 
+			return i;
+	return 1; //should never reach here but 0 is always set as root
+}
 
 // return a pointer to the memory buffer requested
 void *mymalloc(unsigned int size, char *file, int line)
@@ -37,7 +44,7 @@ void *mymalloc(unsigned int size, char *file, int line)
 		root->size = MEMSIZE - sizeof(struct MemEntry);
 		root->isfree = 1;
 		initialized = 1;
-		memEntries[++lastIndex] = memblock;
+		memEntries[getFreeIndex()] = memblock;
 	}
 
 	p = root;
@@ -62,7 +69,7 @@ void *mymalloc(unsigned int size, char *file, int line)
 			next->next = p->next;
 			next->size = p->size - sizeof(struct MemEntry) - size;
 			next->isfree = 1;
-			memEntries[++lastIndex] = next;
+			memEntries[getFreeIndex()] = next;
 			p->size = size;
 			p->isfree = 0;
 			p->next = next;
@@ -91,14 +98,14 @@ void myfree(void *p, char *file, int line)
 	//check if valid memEntry ptr
 	int i;
 	int valid = 0;
-	for (i = 0; i <= lastIndex; i++) {
+	for (i = 0; i < entriesSize; i++) {
 		if (ptr == memEntries[i]) {
 			valid = 1; //memEntry is valid
 			break;
 		}
 	}
 	if (!valid) {
-		fprintf(stderr, "Free failure: Attempting to free memory that was not malloced in FILE: '%s' on LINE: '%d'\n", file, line);
+		fprintf(stderr, "Attempting to free memory that was not malloced in FILE: '%s' on LINE: '%d'\n", file, line);
 		return;
 	}
 
@@ -119,7 +126,7 @@ void myfree(void *p, char *file, int line)
 		// the next chunk is free, merge with it
 		prev->size += sizeof(struct MemEntry) + next->size;
 		//prev->isfree = 1;
-		for (i = 0; i <= lastIndex; i++) {
+		for (i = 0; i < entriesSize; i++) {
 			if (next == memEntries[i]) {
 				memEntries[i] = 0; //merged with next, so removing free memEntry
 				break;

@@ -27,9 +27,9 @@ static int getFreeIndex() {
 void *mymalloc(unsigned int size, char *file, int line)
 {
 	static int initialized = 0;
-	static struct MemEntry *root;
 	struct MemEntry *p;
 	struct MemEntry *next;
+	static struct MemEntry *root;
 	
 	if (size == 0) {
 		fprintf(stderr, "Unable to allocate 0 bytes in FILE: '%s' on LINE: '%d'\n", file, line);
@@ -125,6 +125,7 @@ void myfree(void *p, char *file, int line)
 	{
 		// the next chunk is free, merge with it
 		prev->size += sizeof(struct MemEntry) + next->size;
+		prev->next = next->next;
 		//prev->isfree = 1;
 		for (i = 0; i < entriesSize; i++) {
 			if (next == memEntries[i]) {

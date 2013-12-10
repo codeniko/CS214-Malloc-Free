@@ -99,7 +99,7 @@ void myfree(void *p, char *file, int line)
 	int i;
 	int valid = 0;
 	for (i = 0; i < entriesSize; i++) {
-		if (ptr == memEntries[i]) {
+		if (ptr == memEntries[i] && !ptr->isfree) {
 			valid = 1; //memEntry is valid
 			break;
 		}

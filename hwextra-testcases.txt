@@ -1,0 +1,193 @@
+Test 1:
+	malloc(0);
+
+Output:
+	Unable to allocate 0 bytes in FILE: 'main.c' on LINE: '6'
+-------------------
+
+Test 2:
+    int* p = malloc(sizeof(int));
+    *p = 5;
+    printf("address: %p, value: %d\n",p, *p);
+	free(p);
+
+Output:
+	address: 0x601098, value: 5
+-------------------
+
+Test 3:
+	int i;
+    for(i = 0; i < 5; i++){
+        int* p = malloc(sizeof(int));
+        *p = i;
+        printf("address: %p, value: %d\n",p, *p);
+    }
+
+Output:
+	address: 0x601098, value: 0
+	address: 0x6010b4, value: 1
+	address: 0x6010d0, value: 2
+	address: 0x6010ec, value: 3
+	address: 0x601108, value: 4
+-------------------
+
+Test 4:
+    int i;
+    int* p = malloc(5 * sizeof(int));
+    for(i = 0; i < 5; i++){
+        p[i] = i;
+    }
+    for(i = 0; i < 5; i++){
+        printf("address: %p, value: %d\n", p + i, p[i]);
+    }
+	free(p);
+
+Output:
+	address: 0x601098, value: 0
+	address: 0x60109c, value: 1
+	address: 0x6010a0, value: 2
+	address: 0x6010a4, value: 3
+	address: 0x6010a8, value: 4
+-------------------
+
+Test 5:
+    free(NULL);
+Output:
+	Pointer is NULL in file, free failed in FILE: 'main.c' on LINE: '6'
+-------------------
+
+Test 6:
+    int x;
+    free(&x);
+
+Output:
+	Attempting to free memory that was not malloced in FILE: 'main.c' on LINE: '7'
+-------------------
+
+Test 7:
+    void* p = malloc(1);
+    free(p);
+    printf("p has been freed\n");
+    free(p + 1);
+	
+Output:
+	p has been freed
+	Attempting to free memory that was not malloced in FILE: 'main.c' on LINE: '9'
+-------------------
+
+Test 8:
+    void* p = malloc(2);
+    free(p);
+    printf("p has been freed\n");
+    free(p + 1);
+
+Output:
+	p has been freed
+	Attempting to free memory that was not malloced in FILE: 'main.c' on LINE: '9'
+-------------------
+
+Test 9:
+	void* p malloc(1);
+	free(p);
+	free(p);
+
+Output:
+	Attempting to free memory that was not malloced in FILE: 'Test9.c' on LINE: '8'
+-------------------
+
+Test 10:
+    void* p = malloc(sizeof(int));
+    *((int*)p) = 5;
+    printf("integer: address: %p, value: %d\n", p, *((int*)p));
+    free(p);
+    char* c = "Hello World"; 
+    p = malloc(sizeof(char) * (strlen(c) + 1));
+    memcpy(p, c, strlen(c));
+    printf("String: address: %p, value: %s\n", p, (char*)p);
+    free(p);
+    p = malloc(sizeof(float));
+    *((float*)p) = 1.2345;
+    printf("float: address: %p, value: %f\n", p, *((float*)p));
+    free(p);
+
+Output:
+	integer: address: 0x602098, value: 5
+	String: address: 0x602098, value: Hello World
+	float: address: 0x602098, value: 1.234500
+-------------------
+
+Test 11:
+    void* p;    
+    int i;
+    for(i = 1; (p = malloc(i)) != NULL; i++){
+        printf("%d bytes allocated\n", i);
+        free(p);
+    }
+
+Output:
+
+	1 bytes allocated
+	2 bytes allocated
+	3 bytes allocated
+	...
+	24974 bytes allocated
+	24975 bytes allocated
+	24976 bytes allocated
+	Insufficient memory space requested (24977 bytes) in FILE: 'main.c' on LINE: '8'
+-------------------
+
+Test 12:
+    void* p;    
+    int i;
+    for(i = 1; (p = malloc(i)) != NULL; i++){
+        printf("%d bytes allocated\n", i);
+    }
+
+Output:
+	1 bytes allocated
+	2 bytes allocated
+	3 bytes allocated
+	...
+	198 bytes allocated
+	199 bytes allocated
+	200 bytes allocated
+	Insufficient memory space requested (201 bytes) in FILE: 'Test12.c' on LINE: '8'
+-------------------
+
+Test 13:
+    void* p;
+    int i;
+    for(i = 1; (p = malloc(i % 2 == 0 ? 1 : 30)) != NULL; i++){
+        printf("%d items allocated\n", i);
+    }
+
+Output:
+	1 items allocated
+	2 items allocated
+	3 items allocated
+	...
+	630 items allocated
+	631 items allocated
+	632 items allocated
+	Insufficient memory space requested (30 bytes) in FILE: 'Test13.c' on LINE: '8'
+-------------------
+
+Test 14:
+    void* p;
+    int i;
+    for(i = 1; (p = malloc(1)) != NULL; i++){
+        printf("%d items allocated\n", i);
+    }
+
+Output:
+	1 items allocated
+	2 items allocated
+	3 items allocated
+	...
+	998 items allocated
+	999 items allocated
+	1000 items allocated
+	Insufficient memory space requested (1 bytes) in FILE: 'Test14.c' on LINE: '8'
+-------------------
+
+***All output matches what is expected. All tests are correct***
